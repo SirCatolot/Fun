@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <body>
+  <h1>Hey gurts it's me yo</h1>
+    <p>Dude this is such a great test</p>
+    <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRTebSTP1rWJv9VCXHf_2fk-Q63f22GL0Jgx5Yd2Kfkb5_-5_MKAZ0doytLnLFJAYkkvS10EoUThPAn/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false"></iframe>
+      <script>
+        function updateBackgroundColor() {
+            const now = new Date();
+            const hour = now.getHours();
+            let backgroundColor;
+            
+            // Determine time period and background color
+            if (hour >= 6 && hour < 12) {
+                backgroundColor = '#87CEEB'; // Blue
+            } else if (hour >= 12 && hour < 18) {
+                backgroundColor = '#FFD700'; // Yellow
+            } else if (hour >= 18 && hour < 21) {
+                // Evening: 6pm - 9pm
+                backgroundColor = '#FF6347'; // Orange
+            } else {
+                // Night: 9pm - 6am
+                backgroundColor = '#191970'; // Dark Blue
+            }
+            
+            // Apply the background color
+            document.body.style.backgroundColor = backgroundColor;
+        }
+        
+        // Update immediately when page loads
+        updateBackgroundColor();
+        
+        // Update every minute
+        setInterval(updateBackgroundColor, 60000);
+    </script>
+  </body>
+</html>
