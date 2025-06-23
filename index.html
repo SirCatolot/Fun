@@ -1,22 +1,308 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <body>
-  <h1>Hey gurts it's me yo</h1>
-    <p>The Gang Achievments</p>
-    <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRTebSTP1rWJv9VCXHf_2fk-Q63f22GL0Jgx5Yd2Kfkb5_-5_MKAZ0doytLnLFJAYkkvS10EoUThPAn/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false" width=1800 height=600></iframe>
-    <p style="background-image: url('test_image.jpg');">
-  
-  <h2>My discord background file upload<h2>
-    <form action="/action_page.php" method="POST" enctype="multipart/form-data">
-  <input type="file" id="myFile" name="filename">
-  <input type="submit" value="Upload File">
-</form>
-</form>
-  </body>
+  <title>The Gang Achievements</title>
   <style>
     body {
       background-image: url('test_image.jpg');
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-size: cover;
+      background-attachment: fixed;
+    }
+    
+    .container {
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+    }
+    
+    .status {
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    
+    .status.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .status.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .status.loading {
+      background-color: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
+    input[type="url"] {
+      width: 70%;
+      padding: 10px;
+      margin: 10px 5px 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    button:hover {
+      background-color: #45a049;
+    }
+    
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    
+    .download-history {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      background-color: #f9f9f9;
+    }
+    
+    .download-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .download-item:last-child {
+      border-bottom: none;
+    }
+    
+    .download-info {
+      flex-grow: 1;
+    }
+    
+    .download-actions {
+      display: flex;
+      gap: 5px;
+    }
+    
+    .small-btn {
+      padding: 5px 10px;
+      font-size: 12px;
+      background-color: #007bff;
+    }
+    
+    .small-btn:hover {
+      background-color: #0056b3;
+    }
+    
+    .server-status {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .server-online {
+      background-color: #28a745;
+      color: white;
+    }
+    
+    .server-offline {
+      background-color: #dc3545;
+      color: white;
     }
   </style>
+</head>
+<body>
+  <div id="serverStatus" class="server-status server-offline">Server: Checking...</div>
+  
+  <h1>Hey gurts it's me yo</h1>
+  
+  <div class="container">
+    <p><strong>The Gang Achievements</strong></p>
+    <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRTebSTP1rWJv9VCXHf_2fk-Q63f22GL0Jgx5Yd2Kfkb5_-5_MKAZ0doytLnLFJAYkkvS10EoUThPAn/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false" width="100%" height="400"></iframe>
+  </div>
+  
+  <div class="container">
+    <h2>Auto-Download Discord Background Images</h2>
+    <p>Paste image URLs below - they'll be automatically downloaded to your PC!</p>
+    
+    <div>
+      <input type="url" id="imageUrl" placeholder="https://example.com/your-image.jpg" />
+      <button id="downloadBtn" onclick="downloadImage()">Download to PC</button>
+    </div>
+    
+    <div id="status" style="display: none;"></div>
+    
+    <h3>Download History</h3>
+    <button onclick="refreshHistory()" class="small-btn">Refresh</button>
+    <div id="downloadHistory" class="download-history">
+      <p>Loading download history...</p>
+    </div>
+  </div>
+
+  <script>
+    // Server configuration
+    const SERVER_URL = 'http://localhost:5000'; // Change to your server's IP if needed
+    const API_KEY = 'your_secret_api_key_here_change_this'; // Must match the server's API_KEY
+    
+    // Helper function to make authenticated requests
+    function fetchWithAuth(url, options = {}) {
+      return fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Authorization': `Bearer ${API_KEY}`
+        }
+      });
+    }
+    
+    // Check server status on page load
+    checkServerStatus();
+    refreshHistory();
+    
+    function checkServerStatus() {
+      fetch(`${SERVER_URL}/status`)
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('serverStatus').textContent = `Server: Online (${data.images_count} images)`;
+          document.getElementById('serverStatus').className = 'server-status server-online';
+        })
+        .catch(error => {
+          document.getElementById('serverStatus').textContent = 'Server: Offline';
+          document.getElementById('serverStatus').className = 'server-status server-offline';
+        });
+    }
+    
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
+      statusDiv.style.display = 'block';
+      
+      if (type === 'success' || type === 'error') {
+        setTimeout(() => {
+          statusDiv.style.display = 'none';
+        }, 5000);
+      }
+    }
+    
+    async function downloadImage() {
+      const url = document.getElementById('imageUrl').value.trim();
+      const downloadBtn = document.getElementById('downloadBtn');
+      
+      if (!url) {
+        showStatus('Please enter an image URL', 'error');
+        return;
+      }
+      
+      // Disable button and show loading
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = 'Downloading...';
+      showStatus('Downloading image to your PC...', 'loading');
+      
+      try {
+        const response = await fetchWithAuth(`${SERVER_URL}/download_image`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: url })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showStatus(`✅ Successfully downloaded: ${result.filename} (${formatFileSize(result.size)})`, 'success');
+          document.getElementById('imageUrl').value = '';
+          refreshHistory();
+          checkServerStatus(); // Update image count
+        } else {
+          showStatus(`❌ Download failed: ${result.error}`, 'error');
+        }
+        
+      } catch (error) {
+        console.error('Download error:', error);
+        showStatus(`❌ Connection error: Make sure the Python server is running`, 'error');
+      } finally {
+        // Re-enable button
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = 'Download to PC';
+      }
+    }
+    
+    async function refreshHistory() {
+      try {
+        const response = await fetchWithAuth(`${SERVER_URL}/list_images`);
+        const result = await response.json();
+        
+        const historyDiv = document.getElementById('downloadHistory');
+        
+        if (result.images && result.images.length > 0) {
+          historyDiv.innerHTML = result.images.map(img => `
+            <div class="download-item">
+              <div class="download-info">
+                <strong>${img.filename}</strong><br>
+                <small>Size: ${formatFileSize(img.size)} | Downloaded: ${img.modified}</small>
+              </div>
+              <div class="download-actions">
+                <button class="small-btn" onclick="openImageFolder()">Open Folder</button>
+                <button class="small-btn" onclick="viewImage('${img.filename}')">View</button>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          historyDiv.innerHTML = '<p>No images downloaded yet.</p>';
+        }
+        
+      } catch (error) {
+        document.getElementById('downloadHistory').innerHTML = '<p>Could not load download history. Make sure the server is running.</p>';
+      }
+    }
+    
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function openImageFolder() {
+      alert('The images are saved in the "downloaded_images" folder next to your Python server file.');
+    }
+    
+    function viewImage(filename) {
+      window.open(`${SERVER_URL}/images/${filename}`, '_blank');
+    }
+    
+    // Allow Enter key to download
+    document.getElementById('imageUrl').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        downloadImage();
+      }
+    });
+    
+    // Auto-refresh server status every 30 seconds
+    setInterval(checkServerStatus, 30000);
+  </script>
+</body>
 </html>
